@@ -1,0 +1,27 @@
+# .NET
+bin/
+obj/
+TestResults/
+*.user
+.vs/
+
+# SQLite（起動時に自動で作られる）
+*.db
+*.db-shm
+*.db-wal
+
+# フロント
+node_modules/
+web/dist/
+# `npm run build` の出力先（API が配信する）
+src/GenbaNippo.Api/wwwroot/
+
+# エディタ・OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+Thumbs.db
+.DS_Store
+
+# 作者のローカル作業メモ（開発再開用。公開しない）
+PROJECT.md

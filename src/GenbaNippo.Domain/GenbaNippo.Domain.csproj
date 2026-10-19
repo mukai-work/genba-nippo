@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 業務ルールだけを置く層。外部パッケージには依存させない -->
+</Project>

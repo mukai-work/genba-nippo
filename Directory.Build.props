@@ -1,0 +1,9 @@
+<Project>
+  <!-- 全プロジェクト共通の設定。.NET のバージョンを上げるときはここの1行だけ変える -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>

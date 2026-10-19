@@ -1,0 +1,27 @@
+{
+  "name": "genba-nippo-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "vue": "^3.5.44",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "@vue/test-utils": "^2.5.1",
+    "jsdom": "^26.1.0",
+    "typescript": "~5.9",
+    "vite": "^7.3.7",
+    "vitest": "^4.1.12",
+    "vue-tsc": "^3.3.13"
+  }
+}

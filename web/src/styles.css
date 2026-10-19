@@ -1,0 +1,121 @@
+/* 業務アプリらしく、色は役割ごとに最小限。装飾ではなく情報（状態・遅れ）に色を使う */
+:root {
+  --navy: #0f2a43;
+  --navy-soft: #1d3b57;
+  --accent: #1e5eff;
+  --accent-soft: #e8efff;
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --border: #d8dee6;
+  --border-strong: #b9c3cf;
+  --text: #1b2733;
+  --text-sub: #5a6878;
+
+  --tone-neutral-fg: #4b5868;
+  --tone-neutral-bg: #eef1f4;
+  --tone-info-fg: #1e4fd6;
+  --tone-info-bg: #e8efff;
+  --tone-success-fg: #1f7a4d;
+  --tone-success-bg: #e6f4ec;
+  --tone-warning-fg: #9a5b00;
+  --tone-warning-bg: #fdf1dc;
+  --tone-danger-fg: #b42318;
+  --tone-danger-bg: #fdecea;
+
+  --radius: 4px;
+  font-family: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic UI', Meiryo, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1, h2, h3 { margin: 0; line-height: 1.4; }
+h1 { font-size: 20px; }
+h2 { font-size: 16px; }
+
+.num { font-variant-numeric: tabular-nums; text-align: right; }
+.sub { color: var(--text-sub); font-size: 12px; }
+
+/* レイアウト */
+.page { max-width: 1120px; margin: 0 auto; padding: 24px 16px 64px; }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.panel + .panel { margin-top: 16px; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.panel-body { padding: 16px; }
+.breadcrumb { font-size: 12px; color: var(--text-sub); margin-bottom: 4px; }
+
+/* 表 */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+th { font-size: 12px; font-weight: 600; color: var(--text-sub); background: #fafbfc; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr.clickable { cursor: pointer; }
+tbody tr.clickable:hover { background: #f7f9fc; }
+
+/* ボタン */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 34px; padding: 0 14px; border-radius: var(--radius);
+  border: 1px solid var(--border-strong); background: var(--surface); color: var(--text);
+  font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.btn:hover:not(:disabled) { background: #f2f5f9; text-decoration: none; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: #1a51dd; }
+.btn-danger { color: var(--tone-danger-fg); border-color: #e5b4ae; }
+.btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* フォーム */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label, .field .label { font-size: 12px; font-weight: 600; color: var(--text-sub); }
+.field.wide { grid-column: 1 / -1; }
+input, select, textarea {
+  font: inherit; color: var(--text); background: #fff;
+  border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 6px 10px; min-height: 34px;
+}
+input:focus, select:focus, textarea:focus, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+textarea { min-height: 96px; resize: vertical; }
+input:disabled, textarea:disabled, select:disabled { background: #f3f5f7; color: var(--text-sub); }
+.field-error { color: var(--tone-danger-fg); font-size: 12px; }
+.has-error input, .has-error textarea, .has-error select { border-color: var(--tone-danger-fg); }
+.segmented { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; }
+.segmented label { padding: 6px 14px; cursor: pointer; font-size: 13px; color: var(--text); border-right: 1px solid var(--border); }
+.segmented label:last-child { border-right: none; }
+/* ラジオボタン本体は見えなくするが、キーボード操作と読み上げのために DOM には残す */
+.segmented input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.segmented label { position: relative; }
+.segmented label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+.segmented label.checked { background: var(--navy); color: #fff; }
+
+/* バッジ（状態表示） */
+.badge { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.tone-neutral { color: var(--tone-neutral-fg); background: var(--tone-neutral-bg); }
+.tone-info { color: var(--tone-info-fg); background: var(--tone-info-bg); }
+.tone-success { color: var(--tone-success-fg); background: var(--tone-success-bg); }
+.tone-warning { color: var(--tone-warning-fg); background: var(--tone-warning-bg); }
+.tone-danger { color: var(--tone-danger-fg); background: var(--tone-danger-bg); }
+
+/* お知らせ帯 */
+.notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: var(--radius); border: 1px solid; margin-bottom: 16px; }
+.notice.tone-danger { border-color: #f1c4bf; }
+.notice.tone-success { border-color: #b9dfc9; }
+.notice.tone-warning { border-color: #f2d4a1; }
+
+/* タブ */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.tabs button { background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 14px; font: inherit; font-weight: 600; color: var(--text-sub); cursor: pointer; margin-bottom: -1px; }
+.tabs button.active { color: var(--navy); border-bottom-color: var(--accent); }
+
+.empty { padding: 32px 16px; text-align: center; color: var(--text-sub); }
+.stat { display: flex; flex-direction: column; }
+.stat strong { font-size: 18px; font-variant-numeric: tabular-nums; }
