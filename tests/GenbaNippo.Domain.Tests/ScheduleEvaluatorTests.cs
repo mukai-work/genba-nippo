@@ -72,6 +72,14 @@ public class ScheduleEvaluatorTests
     }
 
     [Fact]
+    public void 閾値ゼロでも予定どおりなら遅れにしない()
+    {
+        var day5 = new DateOnly(2026, 10, 5); // 予定50%
+        Assert.Equal(ScheduleStatus.OnTrack, ScheduleEvaluator.Evaluate(Start, End, 50, day5, 0).Status);
+        Assert.Equal(ScheduleStatus.Behind, ScheduleEvaluator.Evaluate(Start, End, 49, day5, 0).Status);
+    }
+
+    [Fact]
     public void 予定との差をマイナスで返す()
     {
         var result = ScheduleEvaluator.Evaluate(Start, End, 20, new DateOnly(2026, 10, 5), 10);

@@ -30,6 +30,19 @@ public class WorkItemTests
     }
 
     [Fact]
+    public void 進捗を反映すると版番号が上がり無視したときは変わらない()
+    {
+        var item = WorkItem(Site(), 1);
+        Assert.Equal(1, item.Version);
+
+        item.ApplyProgress(60, new DateOnly(2026, 10, 20));
+        Assert.Equal(2, item.Version);
+
+        item.ApplyProgress(40, new DateOnly(2026, 10, 18)); // 古い日報なので無視
+        Assert.Equal(2, item.Version);
+    }
+
+    [Fact]
     public void 同じ日付の日報なら上書きする()
     {
         var item = WorkItem(Site(), 1);

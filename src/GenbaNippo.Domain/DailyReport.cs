@@ -104,6 +104,7 @@ public class DailyReport
         }
         Status = ReportStatus.Submitted;
         SubmittedAt = now;
+        RejectionReason = null; // 直して再提出したので、前回の差戻し理由は役目を終える
         Version++;
     }
 
@@ -117,17 +118,21 @@ public class DailyReport
         {
             throw new InvalidStateException($"{StatusLabel}の日報は承認できません。提出済みの日報だけが承認できます。");
         }
-        foreach (var entry in _progressEntries)
+        // 先に全行を確かめてから反映する（途中で例外になって一部の工程だけ更新される、を防ぐ）
+        var targets = _progressEntries
+            .Select(entry => (entry, workItem: workItems.GetValueOrDefault(entry.WorkItemId)))
+            .ToList();
+        var missing = targets.FirstOrDefault(t => t.workItem is null || t.workItem.SiteId != SiteId);
+        if (missing.entry is not null)
         {
-            if (!workItems.TryGetValue(entry.WorkItemId, out var workItem) || workItem.SiteId != SiteId)
-            {
-                throw new DomainRuleException($"工程（ID: {entry.WorkItemId}）がこの現場に見つかりません。");
-            }
-            workItem.ApplyProgress(entry.ProgressPercent, ReportDate);
+            throw new DomainRuleException($"工程（ID: {missing.entry.WorkItemId}）がこの現場に見つかりません。");
+        }
+        foreach (var (entry, workItem) in targets)
+        {
+            workItem!.ApplyProgress(entry.ProgressPercent, ReportDate);
         }
         Status = ReportStatus.Approved;
         ApprovedAt = now;
-        RejectionReason = null;
         Version++;
     }
 

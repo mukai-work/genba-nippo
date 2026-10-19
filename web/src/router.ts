@@ -15,7 +15,11 @@ export const router = createRouter({
       path: '/sites/:siteId/reports/new',
       name: 'report-new',
       component: () => import('./views/ReportEditView.vue'),
-      props: (route) => ({ siteId: Number(route.params.siteId), reportId: null, initialDate: route.query.date ?? null }),
+      props: (route) => ({
+        siteId: Number(route.params.siteId),
+        reportId: null,
+        initialDate: typeof route.query.date === 'string' ? route.query.date : null,
+      }),
     },
     {
       path: '/sites/:siteId/reports/:reportId',

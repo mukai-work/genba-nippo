@@ -17,7 +17,7 @@ public sealed class DailyReportsController(DailyReportService service, BusinessC
     /// <param name="ct">キャンセル用トークン</param>
     [HttpGet("sites/{siteId:int}/reports")]
     [ProducesResponseType<IReadOnlyList<DailyReportSummaryResponse>>(StatusCodes.Status200OK)]
-    public Task<IReadOnlyList<DailyReportSummaryResponse>> List(int siteId, [FromQuery] string? month, CancellationToken ct) =>
+    public Task<IReadOnlyList<DailyReportSummaryResponse>> List(int siteId, [FromQuery] YearMonth? month, CancellationToken ct) =>
         service.ListAsync(siteId, ParseMonth(month), ct);
 
     /// <summary>日報を下書きで作成する。同じ現場・同じ日の日報は1枚まで。</summary>
@@ -68,21 +68,13 @@ public sealed class DailyReportsController(DailyReportService service, BusinessC
     /// <summary>月ごとの日報を CSV（UTF-8 BOM 付き・Excel 向け）で出力する。</summary>
     [HttpGet("sites/{siteId:int}/reports/export")]
     [Produces("text/csv")]
-    [ProducesResponseType<FileContentResult>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> Export(int siteId, [FromQuery] string? month, CancellationToken ct)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(byte[]))]
+    public async Task<IActionResult> Export(int siteId, [FromQuery] YearMonth? month, CancellationToken ct)
     {
         var (content, fileName) = await service.ExportCsvAsync(siteId, ParseMonth(month), ct);
         return File(content, "text/csv; charset=utf-8", fileName);
     }
 
-    private YearMonth ParseMonth(string? month)
-    {
-        if (string.IsNullOrEmpty(month))
-        {
-            return YearMonth.From(clock.Today);
-        }
-        return YearMonth.TryParse(month, out var value)
-            ? value
-            : throw new DomainRuleException("month は yyyy-MM 形式（例: 2026-10）で指定してください。");
-    }
+    /// <summary>month の指定がなければ今月。形式が違えばフレームワークが 400 を返す（YearMonth は IParsable）。</summary>
+    private YearMonth ParseMonth(YearMonth? month) => month ?? YearMonth.From(clock.Today);
 }

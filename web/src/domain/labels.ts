@@ -14,7 +14,7 @@ export const reportStatusTone: Record<ReportStatus, Tone> = {
   Draft: 'neutral',
   Submitted: 'info',
   Approved: 'success',
-  Rejected: 'danger',
+  Rejected: 'warning', // 差戻しは「対応が必要」。赤はエラーと期限超過だけに使う
 }
 
 export const weatherLabel: Record<Weather, string> = {

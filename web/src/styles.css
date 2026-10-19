@@ -10,6 +10,7 @@
   --border-strong: #b9c3cf;
   --text: #1b2733;
   --text-sub: #5a6878;
+  --surface-sub: #f8f9fb;
 
   --tone-neutral-fg: #4b5868;
   --tone-neutral-bg: #eef1f4;
@@ -54,10 +55,11 @@ h2 { font-size: 16px; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
-th { font-size: 12px; font-weight: 600; color: var(--text-sub); background: #fafbfc; white-space: nowrap; }
+th { font-size: 12px; font-weight: 600; color: var(--text-sub); background: var(--surface-sub); white-space: nowrap; }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr.clickable { cursor: pointer; }
-tbody tr.clickable:hover { background: #f7f9fc; }
+tbody tr.clickable:hover { background: var(--surface-sub); }
+td.chevron { width: 24px; color: var(--text-sub); text-align: right; }
 
 /* ボタン */
 .btn {
@@ -81,15 +83,18 @@ tbody tr.clickable:hover { background: #f7f9fc; }
 .field.wide { grid-column: 1 / -1; }
 input, select, textarea {
   font: inherit; color: var(--text); background: #fff;
-  border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 6px 10px; min-height: 34px;
+  border: 1px solid var(--border-strong); border-radius: var(--radius);
 }
+/* 日付・数値・文字の入力欄と天候の切り替えの高さを 36px にそろえる */
+input:not([type='radio']):not([type='checkbox']), select { height: 36px; padding: 0 10px; }
+textarea { padding: 8px 10px; }
 input:focus, select:focus, textarea:focus, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 textarea { min-height: 96px; resize: vertical; }
 input:disabled, textarea:disabled, select:disabled { background: #f3f5f7; color: var(--text-sub); }
 .field-error { color: var(--tone-danger-fg); font-size: 12px; }
 .has-error input, .has-error textarea, .has-error select { border-color: var(--tone-danger-fg); }
-.segmented { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; }
-.segmented label { padding: 6px 14px; cursor: pointer; font-size: 13px; color: var(--text); border-right: 1px solid var(--border); }
+.segmented { display: inline-flex; align-self: flex-start; border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; }
+.segmented label { display: flex; align-items: center; flex-shrink: 0; white-space: nowrap; height: 34px; padding: 0 16px; cursor: pointer; font-size: 13px; color: var(--text); border-right: 1px solid var(--border); }
 .segmented label:last-child { border-right: none; }
 /* ラジオボタン本体は見えなくするが、キーボード操作と読み上げのために DOM には残す */
 .segmented input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
@@ -119,3 +124,34 @@ input:disabled, textarea:disabled, select:disabled { background: #f3f5f7; color:
 .empty { padding: 32px 16px; text-align: center; color: var(--text-sub); }
 .stat { display: flex; flex-direction: column; }
 .stat strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+
+/* 閲覧用の表示（承認待ち・承認済みの日報） */
+.readout { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px 24px; margin: 0; }
+.readout div.wide { grid-column: 1 / -1; }
+.readout dt { font-size: 12px; font-weight: 600; color: var(--text-sub); }
+.readout dd { margin: 2px 0 0; font-size: 14px; white-space: pre-wrap; }
+
+/* 画面下に固定する操作バー（長い日報でもスクロールせずに押せる） */
+.action-bar {
+  position: sticky; bottom: 0; z-index: 1; margin-top: 16px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.action-bar .push-right { margin-left: auto; }
+
+.skeleton { display: inline-block; width: 320px; max-width: 100%; height: 28px; border-radius: var(--radius); background: var(--tone-neutral-bg); }
+
+/* スマホ幅では表をカード状に縦積みにする（td の data-label を見出しとして出す） */
+@media (max-width: 640px) {
+  .page { padding: 16px 12px 48px; }
+  table.stack-sm thead { display: none; }
+  table.stack-sm, table.stack-sm tbody, table.stack-sm tr, table.stack-sm td { display: block; width: 100%; }
+  table.stack-sm tr { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  table.stack-sm tbody tr:last-child { border-bottom: none; }
+  table.stack-sm td { border: none; padding: 2px 0; text-align: left; }
+  /* 見出しと値を別の列にする（長い見出しが入力欄に食い込まない・値の折り返しがそろう） */
+  table.stack-sm td[data-label] { display: grid; grid-template-columns: 7.5em 1fr; column-gap: 8px; align-items: center; justify-items: start; }
+  table.stack-sm td[data-label]::before { content: attr(data-label); color: var(--text-sub); font-size: 12px; }
+  table.stack-sm td.chevron, table.stack-sm td.hide-sm { display: none; }
+  .btn-month { min-width: 44px; height: 36px; }
+}

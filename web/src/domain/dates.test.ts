@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { daysBetween, formatDateShort, formatMonth, shiftMonth, toIsoDate } from './dates'
+import { daysBetween, formatDateShort, formatDateTime, formatMonth, shiftMonth, toIsoDate } from './dates'
 
 describe('dates', () => {
   it('月をまたいで前後の月を計算できる', () => {
@@ -23,5 +23,12 @@ describe('dates', () => {
 
   it('ローカル日付を yyyy-MM-dd にする', () => {
     expect(toIsoDate(new Date(2026, 0, 5))).toBe('2026-01-05')
+  })
+})
+
+describe('formatDateTime', () => {
+  it('秒を出さず日本時間で表示する', () => {
+    expect(formatDateTime('2026-10-18T17:32:05+09:00')).toBe('2026/10/18 17:32')
+    expect(formatDateTime('2026-10-18T08:32:05Z')).toBe('2026/10/18 17:32')
   })
 })

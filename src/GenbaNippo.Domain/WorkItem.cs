@@ -15,12 +15,19 @@ public class WorkItem
     /// <summary>最後に進捗を反映した日報の日付。これより古い日報では進捗を上書きしない。</summary>
     public DateOnly? LastReportedOn { get; private set; }
 
+    /// <summary>
+    /// 楽観的同時実行制御の版番号。別々の日報が同時に承認されて、同じ工程の進捗を取り合う場合に備える
+    /// （後から保存した側が古い値で上書きしないよう、DB の UPDATE 時に検出する）。
+    /// </summary>
+    public int Version { get; private set; } = 1;
+
     private WorkItem() { } // EF Core 用
 
     public WorkItem(Site site, string name, DateOnly plannedStart, DateOnly plannedEnd)
     {
         SiteId = site.Id;
         Reschedule(site, name, plannedStart, plannedEnd);
+        Version = 1;
     }
 
     public void Reschedule(Site site, string name, DateOnly plannedStart, DateOnly plannedEnd)
@@ -34,6 +41,7 @@ public class WorkItem
         site.EnsureWithinPeriod(plannedStart, plannedEnd, "予定期間");
         PlannedStart = plannedStart;
         PlannedEnd = plannedEnd;
+        Version++;
     }
 
     /// <summary>
@@ -50,6 +58,7 @@ public class WorkItem
         }
         ProgressPercent = percent;
         LastReportedOn = reportDate;
+        Version++;
         return true;
     }
 

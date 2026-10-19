@@ -57,7 +57,8 @@ public static class ScheduleEvaluator
         }
 
         var planned = PlannedPercent(plannedStart, plannedEnd, today);
-        var isBehind = planned - actualPercent >= behindTolerancePoints && planned > 0;
+        var shortfall = planned - actualPercent;
+        var isBehind = shortfall > 0 && shortfall >= behindTolerancePoints;
 
         var status = actualPercent >= 100 ? ScheduleStatus.Completed
             : today > plannedEnd ? ScheduleStatus.Overdue

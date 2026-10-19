@@ -3,7 +3,7 @@ using System.Globalization;
 namespace GenbaNippo.Domain;
 
 /// <summary>「2026-10」のような年月。日報の月次一覧と CSV 出力で使う。</summary>
-public readonly record struct YearMonth
+public readonly record struct YearMonth : IParsable<YearMonth>
 {
     public int Year { get; }
     public int Month { get; }
@@ -35,6 +35,12 @@ public readonly record struct YearMonth
         value = new YearMonth(date.Year, date.Month);
         return true;
     }
+
+    // IParsable を実装すると、コントローラーの [FromQuery] YearMonth をフレームワークが変換してくれる
+    public static YearMonth Parse(string s, IFormatProvider? provider) =>
+        TryParse(s, provider, out var value) ? value : throw new FormatException("yyyy-MM 形式で指定してください。");
+
+    public static bool TryParse(string? s, IFormatProvider? provider, out YearMonth result) => TryParse(s, out result);
 
     public override string ToString() => $"{Year:D4}-{Month:D2}";
 }

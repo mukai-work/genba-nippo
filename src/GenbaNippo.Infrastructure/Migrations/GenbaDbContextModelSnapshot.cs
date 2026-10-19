@@ -121,6 +121,10 @@ namespace GenbaNippo.Infrastructure.Migrations
                     b.Property<int>("SiteId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("SiteId", "PlannedStart");

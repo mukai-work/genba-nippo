@@ -23,7 +23,7 @@ internal static class DatabaseInitializer
         if (config.GetValue("SeedSampleData", false))
         {
             var clock = scope.ServiceProvider.GetRequiredService<BusinessClock>();
-            await SampleDataSeeder.SeedAsync(db, clock.Today, clock.Now);
+            await SampleDataSeeder.SeedAsync(db, clock.Today, clock.Now.Offset);
         }
     }
 }

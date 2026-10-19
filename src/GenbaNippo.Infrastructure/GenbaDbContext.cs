@@ -22,6 +22,7 @@ public class GenbaDbContext(DbContextOptions<GenbaDbContext> options) : DbContex
             b.Property(w => w.Name).HasMaxLength(WorkItem.NameMaxLength).IsRequired();
             b.HasOne<Site>().WithMany().HasForeignKey(w => w.SiteId).OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(w => new { w.SiteId, w.PlannedStart });
+            b.Property(w => w.Version).IsConcurrencyToken();
         });
 
         modelBuilder.Entity<DailyReport>(b =>

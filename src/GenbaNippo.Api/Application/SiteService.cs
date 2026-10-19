@@ -18,10 +18,13 @@ public sealed class SiteService(GenbaDbContext db, BusinessClock clock, IOptions
             .Select(g => new { SiteId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.SiteId, x => x.Count, ct);
 
-        // 遅れ判定は「今日」に依存するので DB ではなくアプリ側で計算する
-        var workItems = await db.WorkItems.AsNoTracking().ToListAsync(ct);
-        var delayed = workItems
-            .Where(w => IsDelayed(w.Evaluate(clock.Today, options.Value.BehindTolerancePoints)))
+        // 遅れ判定は「今日」に依存するので DB ではなくアプリ側で計算する。読むのは判定に必要な4列だけ
+        var schedules = await db.WorkItems.AsNoTracking()
+            .Select(w => new { w.SiteId, w.PlannedStart, w.PlannedEnd, w.ProgressPercent })
+            .ToListAsync(ct);
+        var delayed = schedules
+            .Where(w => IsDelayed(ScheduleEvaluator.Evaluate(
+                w.PlannedStart, w.PlannedEnd, w.ProgressPercent, clock.Today, options.Value.BehindTolerancePoints)))
             .GroupBy(w => w.SiteId)
             .ToDictionary(g => g.Key, g => g.Count());
 

@@ -40,3 +40,15 @@ export function daysBetween(fromIso: string, toIso: string): number {
   }
   return Math.round((toUtc(toIso) - toUtc(fromIso)) / 86_400_000)
 }
+
+/** 提出・承認の日時（"2026-10-18T17:32:05+09:00"）を "2026/10/18 17:32" にする。秒は業務上いらないので出さない */
+export function formatDateTime(isoDateTime: string): string {
+  return new Date(isoDateTime).toLocaleString('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}

@@ -21,11 +21,14 @@ const month = computed(() => (typeof route.query.month === 'string' ? route.quer
 const site = ref<Site | null>(null)
 const workItems = ref<WorkItem[]>([])
 const reports = ref<DailyReportSummary[]>([])
+const loadingSite = ref(true)
+const loadingReports = ref(true)
 const error = ref('')
 
 const showItemForm = ref(false)
 const itemForm = reactive({ name: '', plannedStart: '', plannedEnd: '' })
 const itemErrors = ref<Record<string, string[]>>({})
+const savingItem = ref(false)
 
 const behindItems = computed(() => workItems.value.filter((w) => w.scheduleStatus === 'Behind' || w.scheduleStatus === 'Overdue'))
 const todaysReport = computed(() => reports.value.find((r) => r.reportDate === today))
@@ -39,14 +42,19 @@ async function loadSite() {
     ;[site.value, workItems.value] = await Promise.all([api.getSite(props.siteId), api.listWorkItems(props.siteId)])
   } catch (e) {
     handle(e)
+  } finally {
+    loadingSite.value = false
   }
 }
 
 async function loadReports() {
+  loadingReports.value = true
   try {
     reports.value = await api.listReports(props.siteId, month.value)
   } catch (e) {
     handle(e)
+  } finally {
+    loadingReports.value = false
   }
 }
 
@@ -57,14 +65,21 @@ function setQuery(patch: Record<string, string>) {
 async function addWorkItem() {
   itemErrors.value = {}
   error.value = ''
+  savingItem.value = true
   try {
-    await api.createWorkItem(props.siteId, { ...itemForm })
+    await api.createWorkItem(props.siteId, {
+      name: itemForm.name,
+      plannedStart: itemForm.plannedStart || null,
+      plannedEnd: itemForm.plannedEnd || null,
+    })
     Object.assign(itemForm, { name: '', plannedStart: '', plannedEnd: '' })
     showItemForm.value = false
     await loadSite()
   } catch (e) {
     handle(e)
     if (e instanceof ApiError) itemErrors.value = e.fieldErrors
+  } finally {
+    savingItem.value = false
   }
 }
 
@@ -88,14 +103,18 @@ watch(month, loadReports)
   <main class="page">
     <div class="page-head">
       <div>
-        <div class="breadcrumb"><RouterLink to="/">現場一覧</RouterLink> ／ 現場</div>
-        <h1>{{ site?.name ?? '読み込み中…' }}</h1>
+        <div class="breadcrumb"><RouterLink to="/">現場一覧</RouterLink></div>
+        <h1 v-if="site">{{ site.name }}</h1>
+        <h1 v-else><span class="skeleton" /></h1>
         <p v-if="site" class="sub">工期 {{ formatDate(site.startDate) }} 〜 {{ formatDate(site.endDate) }}</p>
       </div>
-      <div v-if="site" class="btn-row">
+      <div v-if="site" class="head-stats">
         <div class="stat"><span class="sub">承認待ち</span><strong>{{ site.pendingApprovalCount }} 件</strong></div>
-        <div class="stat" style="margin-left: 16px"><span class="sub">遅れている工程</span><strong>{{ behindItems.length }} 工程</strong></div>
-        <button class="btn btn-primary" type="button" style="margin-left: 16px; align-self: center" @click="writeTodaysReport">
+        <div class="stat">
+          <span class="sub">遅れ・期限超過の工程</span>
+          <strong :class="{ warn: behindItems.length > 0 }">{{ behindItems.length }} 工程</strong>
+        </div>
+        <button class="btn btn-primary" type="button" @click="writeTodaysReport">
           {{ todaysReport ? '今日の日報を開く' : '今日の日報を書く' }}
         </button>
       </div>
@@ -109,11 +128,6 @@ watch(month, loadReports)
     </nav>
 
     <template v-if="tab === 'progress'">
-      <NoticeBar
-        v-if="behindItems.length > 0"
-        tone="warning"
-        :message="`遅れ・期限超過の工程: ${behindItems.map((w) => w.name).join('、')}`"
-      />
       <section class="panel">
         <div class="panel-head">
           <h2>工程表（予定 vs 実績）</h2>
@@ -126,21 +140,25 @@ watch(month, loadReports)
             <div class="field" :class="{ 'has-error': itemErrors.name }">
               <label for="item-name">工程名</label>
               <input id="item-name" v-model="itemForm.name" maxlength="50" placeholder="例: 躯体工事" />
+              <span v-for="m in itemErrors.name" :key="m" class="field-error">{{ m }}</span>
             </div>
             <div class="field" :class="{ 'has-error': itemErrors.plannedStart }">
               <label for="item-start">予定開始日</label>
               <input id="item-start" v-model="itemForm.plannedStart" type="date" :min="site?.startDate" :max="site?.endDate" />
+              <span v-for="m in itemErrors.plannedStart" :key="m" class="field-error">{{ m }}</span>
             </div>
             <div class="field" :class="{ 'has-error': itemErrors.plannedEnd }">
               <label for="item-end">予定終了日</label>
               <input id="item-end" v-model="itemForm.plannedEnd" type="date" :min="site?.startDate" :max="site?.endDate" />
+              <span v-for="m in itemErrors.plannedEnd" :key="m" class="field-error">{{ m }}</span>
             </div>
           </div>
           <div class="btn-row" style="margin-top: 12px">
-            <button class="btn btn-primary btn-sm" type="submit">追加する</button>
+            <button class="btn btn-primary btn-sm" type="submit" :disabled="savingItem">追加する</button>
           </div>
         </form>
-        <div v-if="site && workItems.length > 0" class="panel-body">
+        <div v-if="loadingSite" class="empty">読み込み中…</div>
+        <div v-else-if="site && workItems.length > 0" class="panel-body">
           <ProgressBoard :work-items="workItems" :range-start="site.startDate" :range-end="site.endDate" :today="today" />
         </div>
         <div v-else class="empty">工程がまだありません。「工程を追加」から登録してください。</div>
@@ -151,15 +169,16 @@ watch(month, loadReports)
       <section class="panel">
         <div class="panel-head">
           <div class="btn-row" style="align-items: center">
-            <button class="btn btn-sm" type="button" aria-label="前の月" @click="setQuery({ month: shiftMonth(month, -1) })">‹</button>
+            <button class="btn btn-sm btn-month" type="button" aria-label="前の月" @click="setQuery({ month: shiftMonth(month, -1) })">‹</button>
             <h2 style="min-width: 110px; text-align: center">{{ formatMonth(month) }}</h2>
-            <button class="btn btn-sm" type="button" aria-label="次の月" @click="setQuery({ month: shiftMonth(month, 1) })">›</button>
+            <button class="btn btn-sm btn-month" type="button" aria-label="次の月" @click="setQuery({ month: shiftMonth(month, 1) })">›</button>
           </div>
           <a class="btn btn-sm" :href="api.exportUrl(siteId, month)" download>CSV（Excel用）をダウンロード</a>
         </div>
-        <div v-if="reports.length === 0" class="empty">この月の日報はありません。</div>
+        <div v-if="loadingReports" class="empty">読み込み中…</div>
+        <div v-else-if="reports.length === 0" class="empty">この月の日報はありません。</div>
         <div v-else class="table-wrap">
-          <table>
+          <table class="stack-sm">
             <thead>
               <tr>
                 <th>日付</th>
@@ -167,15 +186,19 @@ watch(month, loadReports)
                 <th>天候</th>
                 <th class="num">作業員</th>
                 <th>作業内容</th>
+                <th aria-hidden="true" />
               </tr>
             </thead>
             <tbody>
               <tr v-for="r in reports" :key="r.id" class="clickable" @click="openReport(r)">
-                <td style="white-space: nowrap">{{ formatDateShort(r.reportDate) }}</td>
-                <td><StatusBadge :label="reportStatusLabel[r.status]" :tone="reportStatusTone[r.status]" /></td>
-                <td>{{ weatherLabel[r.weather] }}</td>
-                <td class="num">{{ r.workerCount }} 人</td>
-                <td class="summary">{{ r.workSummary }}</td>
+                <td style="white-space: nowrap">
+                  <RouterLink :to="{ name: 'report', params: { siteId, reportId: r.id } }" @click.stop>{{ formatDateShort(r.reportDate) }}</RouterLink>
+                </td>
+                <td data-label="状態"><StatusBadge :label="reportStatusLabel[r.status]" :tone="reportStatusTone[r.status]" /></td>
+                <td data-label="天候">{{ weatherLabel[r.weather] }}</td>
+                <td class="num" data-label="作業員">{{ r.workerCount }} 人</td>
+                <td class="summary" data-label="作業内容">{{ r.workSummary }}</td>
+                <td class="chevron" aria-hidden="true">›</td>
               </tr>
             </tbody>
           </table>
@@ -187,4 +210,7 @@ watch(month, loadReports)
 
 <style scoped>
 .summary { max-width: 520px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.warn { color: var(--tone-warning-fg); }
+.head-stats { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 24px; }
+@media (max-width: 640px) { .summary { max-width: none; white-space: normal; } }
 </style>

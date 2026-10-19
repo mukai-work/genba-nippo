@@ -9,15 +9,27 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
     .AddControllers()
-    // 列挙型を "Submitted" のような文字列でやり取りする（数値だとフロントで意味が読めない）
-    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+    .AddJsonOptions(o =>
+    {
+        // 列挙型を "Submitted" のような文字列でやり取りする（数値だとフロントで意味が読めない）
+        o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        // JSON の変換エラーで内部の型名（System.Nullable`1[...]）を利用者に見せない
+        o.AllowInputFormatterExceptionMessages = false;
+    });
 
 // エラーはすべて ProblemDetails（RFC 9457）で返す
 builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>
 {
-    if (ctx.ProblemDetails is Microsoft.AspNetCore.Mvc.ValidationProblemDetails)
+    if (ctx.ProblemDetails is Microsoft.AspNetCore.Mvc.ValidationProblemDetails validation)
     {
-        ctx.ProblemDetails.Title = "入力内容に誤りがあります";
+        validation.Title = "入力内容に誤りがあります";
+        // フレームワーク由来の英語メッセージを日本語にそろえる（中身は ValidationMessageLocalizer）
+        var localized = ValidationMessageLocalizer.Localize(validation.Errors);
+        validation.Errors.Clear();
+        foreach (var (key, messages) in localized)
+        {
+            validation.Errors[key] = messages;
+        }
     }
 });
 builder.Services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
@@ -32,6 +44,7 @@ builder.Services.AddSwaggerGen(o =>
 builder.Services.AddOptions<ScheduleOptions>()
     .Bind(builder.Configuration.GetSection(ScheduleOptions.SectionName))
     .Validate(o => o.BehindTolerancePoints is >= 0 and <= 100, "Schedule:BehindTolerancePoints は 0〜100 で指定してください。")
+    .Validate(o => TimeZoneInfo.TryFindSystemTimeZoneById(o.TimeZoneId, out _), "Schedule:TimeZoneId に存在しないタイムゾーンが指定されています。")
     .ValidateOnStart();
 
 builder.Services.AddSingleton(TimeProvider.System);

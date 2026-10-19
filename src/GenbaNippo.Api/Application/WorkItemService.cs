@@ -19,6 +19,13 @@ public sealed class WorkItemService(
         return items.Select(ToResponse).ToList();
     }
 
+    public async Task<WorkItemResponse> GetAsync(int id, CancellationToken ct)
+    {
+        var item = await db.WorkItems.AsNoTracking().FirstOrDefaultAsync(w => w.Id == id, ct)
+            ?? throw new NotFoundException($"工程（ID: {id}）が見つかりません。");
+        return ToResponse(item);
+    }
+
     public async Task<WorkItemResponse> CreateAsync(int siteId, WorkItemRequest request, CancellationToken ct)
     {
         var site = await sites.FindAsync(siteId, ct);

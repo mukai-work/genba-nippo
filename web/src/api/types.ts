@@ -14,11 +14,12 @@ export interface Site {
   delayedWorkItemCount: number
 }
 
+/** 日付は未入力なら null で送る（空文字は JSON の日付に変換できない） */
 export interface CreateSiteRequest {
   name: string
   address: string | null
-  startDate: string
-  endDate: string
+  startDate: string | null
+  endDate: string | null
 }
 
 export interface WorkItem {
@@ -35,8 +36,8 @@ export interface WorkItem {
 
 export interface WorkItemRequest {
   name: string
-  plannedStart: string
-  plannedEnd: string
+  plannedStart: string | null
+  plannedEnd: string | null
 }
 
 export interface ProgressEntryRequest {

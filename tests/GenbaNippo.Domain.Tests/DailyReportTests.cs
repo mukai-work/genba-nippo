@@ -89,6 +89,20 @@ public class DailyReportTests
     }
 
     [Fact]
+    public void 一部の工程が見つからないときは他の工程も更新しない()
+    {
+        var site = Site();
+        var structure = WorkItem(site, 1);
+        var report = Report(site, 18, new ProgressEntry(1, 50), new ProgressEntry(2, 30)); // 工程2は存在しない
+        report.Submit(Now);
+
+        Assert.Throws<DomainRuleException>(() => report.Approve(Now, new Dictionary<int, WorkItem> { [1] = structure }));
+
+        Assert.Equal(0, structure.ProgressPercent); // 途中まで反映されていない
+        Assert.Null(structure.LastReportedOn);
+    }
+
+    [Fact]
     public void 差戻しには理由が必要()
     {
         var report = Report(Site(), 18);
@@ -113,6 +127,7 @@ public class DailyReportTests
 
         Assert.Equal(ReportStatus.Submitted, report.Status);
         Assert.Equal(12, report.WorkerCount);
+        Assert.Null(report.RejectionReason); // 再提出したら前回の差戻し理由は消える
     }
 
     [Fact]

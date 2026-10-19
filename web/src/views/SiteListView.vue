@@ -34,7 +34,12 @@ async function createSite() {
   error.value = ''
   fieldErrors.value = {}
   try {
-    const created = await api.createSite({ ...form, address: form.address || null })
+    const created = await api.createSite({
+      name: form.name,
+      address: form.address || null,
+      startDate: form.startDate || null,
+      endDate: form.endDate || null,
+    })
     await router.push({ name: 'site', params: { siteId: created.id } })
   } catch (e) {
     if (e instanceof ApiError) {
@@ -99,13 +104,14 @@ onMounted(load)
       <div v-if="loading" class="empty">読み込み中…</div>
       <div v-else-if="sites.length === 0" class="empty">まだ現場がありません。「現場を登録」から追加してください。</div>
       <div v-else class="table-wrap">
-        <table>
+        <table class="stack-sm">
           <thead>
             <tr>
               <th>現場名</th>
               <th>工期</th>
               <th>承認待ちの日報</th>
               <th>遅れている工程</th>
+              <th aria-hidden="true" />
             </tr>
           </thead>
           <tbody>
@@ -119,15 +125,16 @@ onMounted(load)
                 <RouterLink :to="{ name: 'site', params: { siteId: site.id } }" @click.stop>{{ site.name }}</RouterLink>
                 <div v-if="site.address" class="sub">{{ site.address }}</div>
               </td>
-              <td class="sub">{{ formatDate(site.startDate) }} 〜 {{ formatDate(site.endDate) }}</td>
-              <td>
+              <td class="sub" data-label="工期">{{ formatDate(site.startDate) }} 〜 {{ formatDate(site.endDate) }}</td>
+              <td data-label="承認待ち">
                 <StatusBadge v-if="site.pendingApprovalCount > 0" :label="`${site.pendingApprovalCount} 件`" tone="info" />
                 <span v-else class="sub">なし</span>
               </td>
-              <td>
+              <td data-label="遅れ">
                 <StatusBadge v-if="site.delayedWorkItemCount > 0" :label="`${site.delayedWorkItemCount} 工程`" tone="warning" />
                 <span v-else class="sub">なし</span>
               </td>
+              <td class="chevron" aria-hidden="true">›</td>
             </tr>
           </tbody>
         </table>

@@ -29,7 +29,7 @@ describe('ProgressBoard', () => {
     expect(row.text()).toContain('遅れ')
     expect(row.text()).toContain('50%')
     expect(row.text()).toContain('20%')
-    expect(row.text()).toContain('-30') // 予定との差
+    expect(row.text()).toContain('−30pt') // 予定との差（単位つき）
   })
 
   it('完了した工程には差を出さない', () => {
@@ -38,11 +38,12 @@ describe('ProgressBoard', () => {
     expect(row.find('.gap').exists()).toBe(false)
   })
 
-  it('予定期間のバーの中を実績の割合だけ塗る', () => {
+  it('予定期間のバーの中を実績の割合だけ塗り、今日時点の予定の位置に線を引く', () => {
     const bar = render().get('[data-testid="work-item-1"] .bar')
     expect(bar.classes()).toContain('bar-Behind')
     expect(bar.attributes('style')).toContain('width: 32.25') // 10日 / 31日
     expect(bar.get('.bar-fill').attributes('style')).toContain('width: 20%')
+    expect(bar.get('.plan-mark').attributes('style')).toContain('left: 50%')
   })
 
   it('今日の位置に縦線を引く', () => {

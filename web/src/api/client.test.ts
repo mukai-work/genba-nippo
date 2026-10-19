@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ApiError, createApiClient } from './client'
+import { ApiError, createApiClient, ProblemType, toFieldName } from './client'
 
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -21,15 +21,28 @@ describe('createApiClient', () => {
     expect(JSON.parse(init.body)).toMatchObject({ version: 2, workerCount: 5 })
   })
 
-  it('409 は ApiError(isConflict) になり、サーバーのメッセージをそのまま使う', async () => {
-    const detail = '他の人がこの日報を更新しました。画面を再読み込みしてから、もう一度操作してください。'
-    const api = createApiClient(vi.fn().mockResolvedValue(jsonResponse(409, { status: 409, title: '他の人が先に更新しました', detail })))
+  it('同時編集の衝突は type で見分け、サーバーのメッセージをそのまま使う', async () => {
+    const detail = '他の人が先にこのデータ（日報または工程）を更新しました。画面を再読み込みしてから、もう一度操作してください。'
+    const api = createApiClient(vi.fn().mockResolvedValue(
+      jsonResponse(409, { status: 409, type: ProblemType.concurrencyConflict, title: '他の人が先に更新しました', detail }),
+    ))
 
     const error = await api.submitReport(1, 1).catch((e: unknown) => e)
 
     expect(error).toBeInstanceOf(ApiError)
-    expect((error as ApiError).isConflict).toBe(true)
+    expect((error as ApiError).isConcurrencyConflict).toBe(true)
     expect((error as ApiError).message).toBe(detail)
+  })
+
+  it('同じ 409 でも状態違い（承認済みの編集など）は再読み込みの対象にしない', async () => {
+    const api = createApiClient(vi.fn().mockResolvedValue(
+      jsonResponse(409, { status: 409, type: ProblemType.invalidState, detail: '承認済みの日報は編集できません。' }),
+    ))
+
+    const error = (await api.submitReport(1, 1).catch((e: unknown) => e)) as ApiError
+
+    expect(error.status).toBe(409)
+    expect(error.isConcurrencyConflict).toBe(false)
   })
 
   it('入力エラーは項目名を画面側の名前（先頭小文字）にそろえる', async () => {
@@ -62,5 +75,12 @@ describe('createApiClient', () => {
     const error = (await api.listSites().catch((e: unknown) => e)) as ApiError
 
     expect(error.message).toContain('サーバーでエラーが起きました')
+  })
+})
+
+describe('toFieldName', () => {
+  it('C# のプロパティ名と JSON パスを画面の項目名にそろえる', () => {
+    expect(toFieldName('EndDate')).toBe('endDate')
+    expect(toFieldName('$.startDate')).toBe('startDate')
   })
 })

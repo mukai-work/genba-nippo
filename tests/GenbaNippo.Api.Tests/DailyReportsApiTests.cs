@@ -3,6 +3,7 @@ using System.Text;
 using GenbaNippo.Api.Contracts;
 using GenbaNippo.Domain;
 using GenbaNippo.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -85,6 +86,7 @@ public class DailyReportsApiTests(GenbaApiFactory factory) : ApiTestBase(factory
         });
 
         var problem = await AssertProblemAsync(second, HttpStatusCode.Conflict);
+        Assert.Equal("urn:genba-nippo:problem:concurrency-conflict", problem.Type); // 画面は type で見分ける
         Assert.Contains("再読み込み", problem.Detail);
 
         var current = await (await Client.GetAsync($"/api/reports/{report.Id}")).ReadAsync<DailyReportResponse>();
@@ -115,6 +117,47 @@ public class DailyReportsApiTests(GenbaApiFactory factory) : ApiTestBase(factory
     }
 
     [Fact]
+    public async Task 別々の日報が同時に承認されても工程の進捗を古い値で上書きしない()
+    {
+        var site = await CreateSiteAsync();
+        var item = await CreateWorkItemAsync(site.Id, "躯体工事", "2026-10-10", "2026-10-29");
+
+        // 1人目（16日の日報 40%）の承認処理が、工程を読み込んだところで止まっている
+        await using var scope = Factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<GenbaDbContext>();
+        var loaded = await db.WorkItems.SingleAsync(w => w.Id == item.Id);
+
+        // 2人目がその間に 17日の日報（60%）を承認しきる
+        await ActAsync(await ActAsync(await CreateReportAsync(site.Id, "2026-10-17", (item.Id, 60)), "submit"), "approve");
+
+        // 1人目は古い状態（まだ何も反映されていない工程）を見ているので 40% を書けてしまう…が、保存時に検出される
+        Assert.True(loaded.ApplyProgress(40, new DateOnly(2026, 10, 16)));
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => db.SaveChangesAsync());
+
+        var items = await (await Client.GetAsync($"/api/sites/{site.Id}/work-items")).ReadAsync<List<WorkItemResponse>>();
+        Assert.Equal(60, items.Single().ProgressPercent);
+    }
+
+    [Fact]
+    public async Task 日付が空でも内部の型名を出さず日本語で返す()
+    {
+        var site = await CreateSiteAsync();
+
+        var response = await Client.PostJsonAsync($"/api/sites/{site.Id}/reports", new
+        {
+            reportDate = "", weather = Weather.Sunny, workerCount = 1, workSummary = "配筋",
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("System.", body);
+        Assert.DoesNotContain("could not be converted", body);
+        var problem = System.Text.Json.JsonSerializer.Deserialize<ValidationProblemDetails>(body, Json.Options)!;
+        Assert.Equal(["入力の形式が正しくありません。"], problem.Errors["reportDate"]); // JSON パス（$.）は外して項目名に
+        Assert.False(problem.Errors.ContainsKey("request")); // 本文全体の重複エラーは返さない
+    }
+
+    [Fact]
     public async Task 下書きを承認しようとすると409()
     {
         var site = await CreateSiteAsync();
@@ -123,6 +166,7 @@ public class DailyReportsApiTests(GenbaApiFactory factory) : ApiTestBase(factory
         var response = await Client.PostJsonAsync($"/api/reports/{report.Id}/approve", new { version = report.Version });
 
         var problem = await AssertProblemAsync(response, HttpStatusCode.Conflict);
+        Assert.Equal("urn:genba-nippo:problem:invalid-state", problem.Type);
         Assert.Contains("提出済みの日報だけが承認できます", problem.Detail);
     }
 
@@ -197,7 +241,9 @@ public class DailyReportsApiTests(GenbaApiFactory factory) : ApiTestBase(factory
         Assert.Equal(2, withoutMonth.Count); // 省略時は今月（2026-10）
 
         var badMonth = await Client.GetAsync($"/api/sites/{site.Id}/reports?month=2026/10");
-        await AssertProblemAsync(badMonth, HttpStatusCode.BadRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, badMonth.StatusCode);
+        var problem = await badMonth.ReadAsync<ValidationProblemDetails>();
+        Assert.Equal("値「2026/10」の形式が正しくありません。", problem.Errors["month"].Single());
     }
 
     [Fact]

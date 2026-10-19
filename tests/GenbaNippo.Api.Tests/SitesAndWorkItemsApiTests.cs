@@ -111,6 +111,8 @@ public class SitesAndWorkItemsApiTests(GenbaApiFactory factory) : ApiTestBase(fa
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var updated = await response.ReadAsync<WorkItemResponse>();
+        var fetched = await (await Client.GetAsync($"/api/work-items/{item.Id}")).ReadAsync<WorkItemResponse>();
+        Assert.Equal(updated.Name, fetched.Name);
         Assert.Equal("躯体工事（1〜3階）", updated.Name);
         Assert.Equal(new DateOnly(2026, 11, 30), updated.PlannedEnd);
     }
