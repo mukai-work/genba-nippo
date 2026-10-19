@@ -20,7 +20,7 @@ public static class ProblemTypes
 }
 
 /// <summary>
-/// 例外を RFC 9457 の ProblemDetails に変換する（.NET 8 の IExceptionHandler）。
+/// 例外を RFC 9457 の ProblemDetails に変換する（.NET 8 以降の IExceptionHandler）。
 /// コントローラーには try-catch を書かず、業務エラーの HTTP ステータスはここで一元管理する。
 /// </summary>
 internal sealed class ProblemDetailsExceptionHandler(

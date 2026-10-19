@@ -2,7 +2,7 @@
 
 ## 1. 題材の選び方
 
-ASP.NET Core（.NET 8）と Vue 3 + TypeScript で、業務系 Web アプリを設計からテストまで一人で作る個人開発。
+ASP.NET Core（.NET 10）と Vue 3 + TypeScript で、業務系 Web アプリを設計からテストまで一人で作る個人開発。
 5 分で全体を説明でき、かつ設計の判断を具体的に語れる規模に絞った。
 
 - 題材は **一般的な建設業務**（作業日報・工程の進捗）だけを使う。特定の顧客・案件の情報や仕様は一切含めない
@@ -31,7 +31,7 @@ ASP.NET Core（.NET 8）と Vue 3 + TypeScript で、業務系 Web アプリを�
    工程は「最後に反映した日報の日付」を持ち、それより古い日付の反映は無視する。
 3. **遅れ判定は「今日」を注入してテストする**
    予定進捗 = 工期の経過日数 ÷ 全日数。実績が予定より閾値（既定 10 ポイント）以上低ければ「遅れ」、終了予定日を過ぎて未完了なら「期限超過」。
-   .NET 8 の `TimeProvider` を DI して、テストでは日付を固定する。閾値は `appsettings.json` の Options で変更できる。
+   .NET 8 で追加された `TimeProvider` を DI して、テストでは日付を固定する。閾値は `appsettings.json` の Options で変更できる。
 4. **同時編集の衝突を 409 で返す（楽観的同時実行制御）**
    日報は `Version` を持ち、画面が読み込んだ時点の Version を送り返す。他の人が先に更新していれば 409 Conflict を返し、画面は「最新の内容を読み込む」ボタンを出す。
    工程も `Version` を持つ。別々の日報が同時に承認され、同じ工程の進捗を取り合った場合に、後から保存した側が古い値で上書きしないよう DB の UPDATE 時に検出する。
@@ -40,11 +40,11 @@ ASP.NET Core（.NET 8）と Vue 3 + TypeScript で、業務系 Web アプリを�
 ## 4. 構成
 
 ```
-Vue 3 + TypeScript (Vite)  ──/api──▶  ASP.NET Core Web API (.NET 8)
+Vue 3 + TypeScript (Vite)  ──/api──▶  ASP.NET Core Web API (.NET 10)
                                           │ Controllers → Application Services
                                           │ Domain（業務ルール・依存なし）
                                           ▼
-                                     EF Core 8 → SQLite（SQL Server に差し替え可能）
+                                     EF Core 10 → SQLite（SQL Server に差し替え可能）
 ```
 
 | プロジェクト | 役割 |

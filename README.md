@@ -3,7 +3,7 @@
 [![CI](https://github.com/mukai-work/genba-nippo/actions/workflows/ci.yml/badge.svg)](https://github.com/mukai-work/genba-nippo/actions/workflows/ci.yml)
 
 建設現場の **作業日報・工程の進捗・承認フロー** を扱う小さな業務 Web アプリです。
-**ASP.NET Core 8 Web API + EF Core** と **Vue 3 + TypeScript** で、設計からテストまで一人で作りました。
+**ASP.NET Core（.NET 10）Web API + EF Core** と **Vue 3 + TypeScript** で、設計からテストまで一人で作りました。
 
 ![工程表（予定 vs 実績）](docs/images/progress-board.png)
 
@@ -36,9 +36,9 @@
 
 | 区分 | 使用技術 |
 |---|---|
-| バックエンド | C# 12 / .NET 8 / ASP.NET Core Web API（Controller ベース） |
-| データアクセス | Entity Framework Core 8（Code First・マイグレーション）/ SQLite |
-| API 仕様 | Swagger（OpenAPI）・エラーは RFC 9457 ProblemDetails で統一 |
+| バックエンド | C# 14 / .NET 10（LTS）/ ASP.NET Core Web API（Controller ベース） |
+| データアクセス | Entity Framework Core 10（Code First・マイグレーション）/ SQLite |
+| API 仕様 | OpenAPI 3.1（.NET 標準の `Microsoft.AspNetCore.OpenApi`。XML コメントを反映）＋ Swagger UI で表示・エラーは RFC 9457 ProblemDetails で統一 |
 | フロントエンド | Vue 3.5（Composition API・`<script setup>`）/ TypeScript 5.9 / Vue Router 4 / Vite 7 |
 | テスト | xUnit（単体・`WebApplicationFactory` による結合）/ Vitest + Vue Test Utils |
 | 品質 | ビルド警告をエラー扱い（`TreatWarningsAsErrors`）/ ESLint（typescript-eslint・eslint-plugin-vue）/ `vue-tsc` |
@@ -51,7 +51,7 @@ flowchart LR
     subgraph Browser["ブラウザ"]
         UI["Vue 3 + TypeScript"]
     end
-    subgraph Api["ASP.NET Core 8 Web API"]
+    subgraph Api["ASP.NET Core Web API（.NET 10）"]
         C["Controllers<br/>（薄く保つ）"] --> S["Application Services<br/>（ユースケース）"]
         S --> D["Domain<br/>（業務ルール・依存なし）"]
         S --> I["Infrastructure<br/>（EF Core）"]
@@ -92,22 +92,22 @@ stateDiagram-v2
 
 1. **業務ルールをドメインに閉じ込める** — 状態遷移は `DailyReport` クラスだけが持ち、許されない操作（承認済みの編集など）は例外にする。コントローラーに `if (status == ...)` を書かない。
 2. **古い日報をあとから承認しても進捗が巻き戻らない** — 工程は「最後に反映した日報の日付」を持ち、それより古い日報では上書きしない。承認の順番は日付どおりとは限らないため。
-3. **「今日」を注入してテストする** — .NET 8 の `TimeProvider` を DI し、テストでは `FakeTimeProvider` で日付を固定。サーバーが UTC で動いていても日本の日付で判定する（タイムゾーンは設定で変更可）。
+3. **「今日」を注入してテストする** — .NET 8 で追加された `TimeProvider` を DI し、テストでは `FakeTimeProvider` で日付を固定。サーバーが UTC で動いていても日本の日付で判定する（タイムゾーンは設定で変更可）。
 4. **同時編集を 409 で返す** — 日報と工程の両方に版番号（`Version`）を持たせ、EF Core の同時実行トークンにしている。日報は画面が読み込んだ版と違えば 409。別々の日報が同時に承認されて同じ工程の進捗を取り合った場合も、後から保存した側を DB の UPDATE 時に検出する（どちらもテストで再現）。なお工程の版番号はこの承認時の競合に備えたもので、工程の名前・予定期間の変更（PUT）では版番号を比較していない。
-5. **エラー応答を一元化** — .NET 8 の `IExceptionHandler` で業務例外を ProblemDetails に変換し、`type` で種類を区別する（同じ 409 でも「再読み込みで解消する衝突」と「状態が違う」を画面が見分ける）。入力の型変換エラーも日本語にそろえ、内部の型名は外に出さない。
+5. **エラー応答を一元化** — .NET 8 で追加された `IExceptionHandler` で業務例外を ProblemDetails に変換し、`type` で種類を区別する（同じ 409 でも「再読み込みで解消する衝突」と「状態が違う」を画面が見分ける）。入力の型変換エラーも日本語にそろえ、内部の型名は外に出さない。
 6. **CSV は Excel 前提で作る** — BOM 付き UTF-8・CRLF・クォート処理に加え、`=` `+` `-` `@` で始まる自由入力の先頭に `'` を付けて無害化（CSV インジェクション対策）。代わりにその値は Excel 上で `'` 付きの文字として見える、というトレードオフを選んでいる。
 
 ## 起動手順
 
 ### 必要なもの
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download)（8.0.400 以降）
+- [.NET 10 SDK](https://dotnet.microsoft.com/download)（10.0.100 以降）
 - [Node.js](https://nodejs.org/) 20.19 以降
 
 ### 開発モード（API と画面を別々に起動）
 
 ```bash
-# 1. API（http://localhost:5290、Swagger は /swagger）
+# 1. API（http://localhost:5290、API 仕様は /swagger、OpenAPI ドキュメントは /openapi/v1.json）
 dotnet run --project src/GenbaNippo.Api --launch-profile http
 
 # 2. 画面（別のターミナルで。http://localhost:5192）
@@ -145,7 +145,7 @@ cd web && npm test # Vitest：34件（npm run lint / npm run typecheck も CI �
 
 ## API
 
-Swagger（`/swagger`）で試せます。主なエンドポイント:
+開発モードでは Swagger UI（`/swagger`）で試せます。OpenAPI ドキュメントは `/openapi/v1.json`。主なエンドポイント:
 
 | メソッド | パス | 内容 |
 |---|---|---|
@@ -178,7 +178,6 @@ MVP として、次のものは意図的に外しています。
 - HTTPS リダイレクト・ヘルスチェック・ログの集約など運用まわり（ローカルで動かすデモのため）
 - 写真の添付（Azure Blob Storage を想定）
 - SQL Server への切り替えと Azure App Service へのデプロイ
-- .NET 10（LTS）への更新 — `TargetFramework` は `Directory.Build.props` の1か所で管理しているので、変更箇所はそこと NuGet パッケージの版だけで済む
 
 ## ライセンス
 

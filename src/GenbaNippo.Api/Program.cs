@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Text.Json.Serialization;
 using GenbaNippo.Api.Application;
 using GenbaNippo.Api.Infrastructure;
@@ -34,12 +33,15 @@ builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>
 });
 builder.Services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(o =>
+// OpenAPI ドキュメント（/openapi/v1.json）。XML コメントは .NET 10 のソース生成で自動的に反映される
+builder.Services.AddOpenApi(o => o.AddDocumentTransformer((document, _, _) =>
 {
-    var xml = Path.Combine(AppContext.BaseDirectory, $"{Assembly.GetExecutingAssembly().GetName().Name}.xml");
-    o.IncludeXmlComments(xml);
-});
+    document.Info.Title = "現場日報ボード API";
+    document.Info.Description = "建設現場の作業日報・工程の進捗・承認フローを扱う API。エラーは RFC 9457 ProblemDetails で返す。";
+    return Task.CompletedTask;
+}));
+// OpenAPI のスキーマ生成もコントローラーと同じく列挙型を文字列として扱う（ドキュメントと実際の応答をそろえる）
+builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddOptions<ScheduleOptions>()
     .Bind(builder.Configuration.GetSection(ScheduleOptions.SectionName))
@@ -64,8 +66,8 @@ app.UseStatusCodePages();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.MapOpenApi();
+    app.UseSwaggerUI(o => o.SwaggerEndpoint("/openapi/v1.json", "現場日報ボード API"));
 }
 
 // `npm run build` したフロントを wwwroot から配信する（1プロセスで画面と API を出せる）
